@@ -8,6 +8,13 @@
 
     .org $FBD0
 
+;##################################################################################################
+;##################################################################################################
+;##################################################################################################
+;##################################################################################################
+; Author: Turboxray
+; Comment: This is temporary and just a proof of concept. The header/string ID need to be worked out
+;          for other asset blocks. Probably build a table and put it in the upper 1MB area.
 Hook_1:
         lda <$08
         cmp #$fd
@@ -70,6 +77,9 @@ Hook_1:
   rts
 
 
+;..............................................
+; Author: Upsilandre's edits.
+
     .org $1f40
 
       .db $a2, $50, $a9, $ff, $4c, $ad, $ce
@@ -78,6 +88,11 @@ Hook_1:
 
       .db $04, $10, $00, $02, $02, $1f, $04
 
+
+;##################################################################################################
+;##################################################################################################
+;##################################################################################################
+;##################################################################################################
 
   .bank $01
 
@@ -135,6 +150,8 @@ Hook_1:
     .db $05, $10, $00
     .db $03, $05, $27, $06
 
+;..............................................
+; Author: Turboxray
     ; Resolution and vram access settings: 10.74mhz. In game
     .db $06, $1a, $00
     .db $02, $13, $2f, $0f
@@ -151,7 +168,7 @@ Hook_1:
     .org $71d3
     .db $2f
 
-    ; Upsilandre's hook
+    ; Upsilandre's hook that lives in the fixed bank
     .org $7285
     jsr $ff40
 
@@ -169,6 +186,10 @@ Hook_1:
 
 
   .bank $0b
+
+;..............................................
+; Author: Upsilandre's edits.
+; Comment: I'm not sure what these are for.
 
     .org $1ad9
     .db $90, $7c, $ad, $6a, $2b, $18, $79
@@ -213,6 +234,9 @@ Hook_1:
 
   .bank $0d
 
+;..............................................
+; Author: Upsilandre's edits.
+; Comment: Looks like code (EA -> NOPs)
     .org $0489
     .db $3A, $C9, $05, $90, $02, $A9, $04, $9D, $3E, $36, $60, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA
 
@@ -397,6 +421,7 @@ Hook_1:
 
 
   .bank $80
- .incspr "assets/reaper/reaper.png"
- .incpal "assets/reaper/reaper.png"
+
+  .incspr "assets/reaper/reaper.png"
+  .incpal "assets/reaper/reaper.png"
 
