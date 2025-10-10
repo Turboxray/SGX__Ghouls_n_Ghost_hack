@@ -1,7 +1,8 @@
-.sym
-.lst
-.bak
-.pce
-.sgx
+*.sym
+*.lst
+*.bak
+*.pce
+*.sgx
 reaper.png
-.psd
+*.psd
+log.txt
