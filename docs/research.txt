@@ -24,14 +24,14 @@ Free rom space in Bank 0:
 
                                Num
                               CELLS
-                  Bank?         |
-                    |           |
-                    |           |
-                    | [vaddr]   |
-                    |  |  |     |
+                [data]          |
+                 |  |           |
+                 |  |           |
+                 |  | [vaddr]   |
+                 |  |  |  |     |
                 fd 5a 00 5a 00 8e 06 06  <- data (header?)
-                |            |     |  |
-                ??           |     |  |
+                             |     |  |
+                             |     |  |
                              |    &1  |
                             VDC       |
                                      >>1
@@ -56,3 +56,89 @@ Free rom space in Bank 0:
 E11C -> JSR $E519       Loads either all 512 colors or 256 colors for BG or Sprites to VCE
 
     $2453 <- full sprite pal data block that gets transfered to VCE
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+    mid level updates:
+
+    e7b4 -> JSR $c000
+                JMP ($c003,x)   ;x=12
+                    -> D600
+
+                        Calls D670
+                            -> saves 2 sprite cell bitplanes from vram
+                        Calls D68E
+                            -> writes both cells back to vram
+
+    $0a:d37b -> JSR $ef55 ???
+    $0d:d149 -> JSR $ef55 ???
+
+
+    together:
+        $ef55 writes the first two bitplanes. Completes. Returns.
+            Each call writes one 16x16 cell
+        $d600 writes the third bitplane
+            Each call appears to write two 16x16 cells
+
+    Note: $ef55 is also used to decompress entire blocks to vram at the start of the level.
+          Unclear why the mid level updates are broken into different calls.
+
+
+
+.................................
+
+    Called from
+
+    $ef55
+
+          $76   -> Some mode. $0c is sprite pixels?
+        [$74]   -> graphic data.
+                    0:  byte have some relation to bit planes
+                    >1: data
+
+
+.................................
+
+    Called from JSR $C000 (jump table)
+
+    $d600
+            Entry:      Load WR and RD vram pointers
+
+                        $29   ->     0: VDC 1
+                                    >0: VDC 2
+                        $28   ->    number of 16x16 sprite cells
+
+            16bit pattern fill -> $2aac. $20 bytes
+
+            Each 16x16 cell is 4 planes
+                $D670   -> skips planes (one entire 16x16 1bit plane per call )
+                           this is called three times and skips three planes
+                $D68E   -> writes a single plane
+
+
+
+...................................
+
+Free ZP vars from using $EF55
+
+    $77     -> temp
+    $18     -> this might need to be zero'd out on replacement asset loads
+
+                if $18 is zero, then:
+
+                    $28
+                    $29
+                    $0c
+                    $0d
+                    $14
+                    $10
+
+
+

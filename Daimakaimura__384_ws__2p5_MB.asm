@@ -1,4 +1,7 @@
 
+  .mlist
+  .list
+
 ;################################################
   .incbin "Daimakaimura.sgx"                   ;#
 ;################################################
@@ -13,68 +16,162 @@
 ;##################################################################################################
 ;##################################################################################################
 ; Author: Turboxray
-; Comment: This is temporary and just a proof of concept. The header/string ID need to be worked out
-;          for other asset blocks. Probably build a table and put it in the upper 1MB area.
+; Comment: Implemented a table for source bank:addr lookup. Eventually this won't be needed.
+
+
+data_addr_lo = $2074
+data_addr_hi = $2075
+
+xfer_asset.lsb = data_addr_lo
+xfer_asset.msb = data_addr_hi
+
+xfer_asset = xfer_asset.lsb
+
+_ptr = $200c
+
+
+sf2_page_0 = 0
+sf2_page_1 = 1
+sf2_page_2 = 2
+sf2_page_3 = 3
+
+no_entry_found:
+              plx
+              pla
+            sta <_ptr+1
+              pla
+            sta <_ptr
+
+            stz $FFF0 + sf2_page_0
+              pla
+            tam #$02
+              plp
+            jmp $EF55
+
 Hook_1:
-        lda <$08
-        cmp #$fd
-      bne .out
-        lda <$09
-        cmp #$5a
-      bne .out
-        lda <$0c
-        cmp #$00
-      bne .out
-        lda <$0d
-        cmp #$5a
-      bne .out
-        lda <$10
-        cmp #$00
-      bne .out
-        jmp .cont
+            php
+            sei
+            tma #$02
+            tay
+            pha
+            stz $FFF0 + sf2_page_1
+            lda #$40
+            tam #$02
 
-.out
-        jmp $EF55
+find_entry:
 
-.cont
-        tma #$02
-          pha
-        tma #$03
-          pha
-        tma #$04
-          pha
-
-        stz $FFF1
-
-        lda #$40
-        tam #$02
-        inc a
-        tam #$03
-        inc a
-        tam #$04
-
-        tia $4000, $0002, ($7d40-$5a00)*2
-
-        lda #$90
-        sta $402
-        lda #$01
-        sta $403
-
-        tii ($4000+$4800), $2573, 32
-
-        stz $FFF0
-
-          pla
-        tam #$04
-          pla
-        tam #$03
-          pla
-        tam #$02
+            lda <_ptr
+            pha
+            lda <_ptr+1
+            pha
+            phx
 
 
-        lda #$01
-        sta <$28
+
+            lda bank_table,y
+            cmp #$ff
+          beq no_entry_found
+            ; jmp .no.match
+            lsr a
+            sta <$77
+            asl a
+
+            adc #low(level_sprite_data)
+            sta <_ptr
+            lda #high(level_sprite_data)
+            adc #$00
+            sta <_ptr+1
+            ldx bank_entry_len,y
+            lda <data_addr_hi
+            sta <data_addr_hi
+
+            cly
+.check.match
+
+            lda [_ptr],y
+            iny
+            cmp <data_addr_lo
+          bne .next.0
+            lda [_ptr],y
+            iny
+            cmp <data_addr_hi
+          bne .next.1
+
+.match.found
+
+
+            tya
+            lsr a
+            dec
+            adc <$77
+            tay
+
+              plx
+              pla
+            sta <_ptr+1
+              pla
+            sta <_ptr
+
+            tma #$03
+              pha
+            tma #$04
+              pha
+
+            lda assets.addr.lo,y
+            sta xfer_asset.lsb
+            lda assets.addr.hi,y
+            sta xfer_asset.msb
+
+              phx
+            ldx assets.block,y
+
+            lda assets.bank,y
+            tam #$02
+            inc a
+            tam #$03
+            inc a
+            tam #$04
+            stz $FFF0,x
+
+            jsr .load_asset
+
+            stz $FFF0 + sf2_page_0
+              plx
+
+              pla
+            tam #$04
+              pla
+            tam #$03
+              pla
+            tam #$02
+
+            lda #$01
+            sta <$28
+            stz <$18          ; Needed so the game doesn't try to do funny bitplane stuffs
+              plp
   rts
+
+.next.0
+            iny
+.next.1
+            dex
+          bne .check.match
+
+.no.match
+              plx
+              pla
+            sta <_ptr+1
+              pla
+            sta <_ptr
+
+            stz $FFF0 + sf2_page_0
+            pla
+            tam #$02
+              plp
+            jmp $EF55
+
+.load_asset
+            jmp [xfer_asset]
 
 
 ;..............................................
@@ -93,6 +190,9 @@ Hook_1:
 ;##################################################################################################
 ;##################################################################################################
 ;##################################################################################################
+
+;---------------------------------------
+;---------------------------------------
 
   .bank $01
 
@@ -135,12 +235,16 @@ Hook_1:
     .org $2df5
     .db $9f
 
+;---------------------------------------
+;---------------------------------------
 
   .bank $02
 
     .org $50c9
     .db $98
 
+;---------------------------------------
+;---------------------------------------
 
   .bank $03
 
@@ -172,18 +276,24 @@ Hook_1:
     .org $7285
     jsr $ff40
 
+;---------------------------------------
+;---------------------------------------
 
   .bank $09
 
     .org $2037
     .db $40
 
+;---------------------------------------
+;---------------------------------------
 
   .bank $0A
 
     .org $11f5
     .db $09
 
+;---------------------------------------
+;---------------------------------------
 
   .bank $0b
 
@@ -231,6 +341,8 @@ Hook_1:
     .org $1bfb
     .db $dc
 
+;---------------------------------------
+;---------------------------------------
 
   .bank $0d
 
@@ -241,11 +353,23 @@ Hook_1:
     .db $3A, $C9, $05, $90, $02, $A9, $04, $9D, $3E, $36, $60, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA
 
 
-    .org $13d1
+    .org $13d0
 
         jsr Hook_1
 
+;---------------------------------------
+;---------------------------------------
+  .bank $14
 
+    .org $c146
+      .db $0e,$0e       ; changed from $09,$09. Palette for guillotine sprites.
+
+    .org $c638
+
+        lda #$0e        ; change from #$09
+
+;---------------------------------------
+;---------------------------------------
   .bank $23
 
     .org $135f
@@ -255,6 +379,8 @@ Hook_1:
         sta $2c6f
         lda #$07
         sta $2c70
+;---------------------------------------
+;---------------------------------------
 
   .bank $2a
 
@@ -263,6 +389,8 @@ Hook_1:
         ;note:? Looks like a right side screen bounds check
         cmp #$2d
 
+;---------------------------------------
+;---------------------------------------
 
   .bank $5a
 
@@ -287,6 +415,9 @@ Hook_1:
   ; From Upsilandre's hack.
   ; Comment: I think these are related to HUD offsets. All the values are 0x20 less than their
   ;          original values.
+
+;---------------------------------------
+;---------------------------------------
 
   .bank $5b
 
@@ -420,8 +551,182 @@ Hook_1:
         lda #$a0
 
 
-  .bank $80
 
+
+
+
+;....................................................................................................................
+;####################################################################################################################
+;####################################################################################################################
+;####################################################################################################################
+;                                                                                                                   #
+; Replacement sprite assets                                                                                         #
+;                                                                                                                   #
+;####################################################################################################################
+;....................................................................................................................
+
+
+;....................................................................................
+;....................................................................................
+; Look up table data                                                                .
+;....................................................................................
+
+  .bank $80, "LUTs"
+      .org $4000
+
+bank_table:
+
+      ; Bank Match
+      ;   0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+
+    .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 0
+    .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 1
+    .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 2
+    .db $00,$06,$0a,$ff,$ff,$10,$14,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$1c       ; 3
+    .db $ff,$ff,$ff,$20,$ff,$ff,$22,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 4
+    .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 5
+    .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 6
+    .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 7
+
+bank_entry_len:
+
+      ; Bank entry len
+      ;   0   1   2   3   4   5   6   7   8   9   A   B   C   D   E   F
+
+    .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 0
+    .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 1
+    .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 2
+    .db $03,$02,$03,$ff,$ff,$02,$04,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$02       ; 3
+    .db $ff,$ff,$ff,$01,$ff,$ff,$01,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 4
+    .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 5
+    .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 6
+    .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 7
+
+level_sprite_data
+    ; level 1 initial load
+    .dw $ffff ;.dw $520f
+    .dw $ffff ;.dw $4e43
+    .dw $5451
+
+    .dw $ffff ;.dw $535d
+    .dw $ffff ;.dw $4318
+
+    .dw $ffff ;.dw $40fd
+    .dw $ffff ;.dw $4dc7
+    .dw $5afd
+
+    .dw $ffff ;.dw $577b
+    .dw $ffff ;.dw $5cc6
+
+    .dw $ffff ;.dw $5f5f
+    .dw $ffff ;.dw $4355
+    .dw $ffff ;.dw $45a0
+    .dw $ffff ;.dw $442a
+
+    .dw $ffff ;.dw $4657
+    .dw $ffff ;.dw $564b
+
+    .dw $ffff ;.dw $4e5a
+
+    .dw $ffff ;.dw $57b1
+
+assets.bank
+    .db 0
+    .db 0
+    .db bank(Enemy.guillotine)
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db bank(Enemy.reaper)
+assets.block
+    .db 0
+    .db 0
+    .db sf2_page_1
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db sf2_page_1
+
+assets.addr.lo
+    .db 0
+    .db 0
+    .db low(Enemy.guillotine)
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db low(Enemy.reaper)
+
+assets.addr.hi
+    .db 0
+    .db 0
+    .db high(Enemy.guillotine)
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db high(Enemy.reaper)
+
+
+
+;....................................................................................
+;....................................................................................
+; Sprite assets                                                                     .
+;....................................................................................
+
+
+
+;..........................................
+;..........................................
+;..........................................
+;..........................................
+
+  .bank $81, "Reaper"
+    .org $4000
+
+Enemy.reaper
+
+        tia Enemy.repear.offset, $0002, Enemy.repear.len
+        tii Enemy.repear.pal, $2573, 32
+  rts
+
+Enemy.repear.data
   .incspr "assets/reaper/reaper.png"
+
+Enemy.repear.pal
   .incpal "assets/reaper/reaper.png"
 
+Enemy.repear.offset = Enemy.repear.data + (8 * 128)
+
+;                                    start_offset   end_offset
+Enemy.repear.len = ( 256 * 160 / 2) - (8 * 128)  -  (10 * 128)
+
+
+
+
+;..........................................
+;..........................................
+;..........................................
+;..........................................
+
+  .bank $85, "guillotine"
+    .org $4000
+
+Enemy.guillotine
+
+        tia Enemy.guillotine.offset, $0012, Enemy.guillotine.len
+        tii Enemy.guillotine.pal, $2613, 32
+  rts
+
+Enemy.guillotine.data
+  .incspr "assets/head_stone/guillotine.png"
+
+Enemy.guillotine.pal
+  .incpal "assets/head_stone/guillotine.png"
+
+Enemy.guillotine.offset = Enemy.repear.data + (8 * 128)
+
+;                                    start_offset   end_offset
+Enemy.guillotine.len = ( 256 * 32 / 2) - (8 * 128)
