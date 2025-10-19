@@ -64,7 +64,7 @@ E11C -> JSR $E519       Loads either all 512 colors or 256 colors for BG or Spri
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////////////
-
++
 
     mid level updates:
 
@@ -88,7 +88,7 @@ E11C -> JSR $E519       Loads either all 512 colors or 256 colors for BG or Spri
             Each call appears to write two 16x16 cells
 
     Note: $ef55 is also used to decompress entire blocks to vram at the start of the level.
-          Unclear why the mid level updates are broken into different calls.
+
 
 
 
@@ -140,5 +140,22 @@ Free ZP vars from using $EF55
                     $14
                     $10
 
+..................................
+
+Mid-level updates
+
+    $0d:
+            $d101
+                ldx <$66
+                lda $ad20,x         0= VDC 1, 1 = VDC 2
+
+            $d149
+                jsr $ef55
+                dec $28             total cells to copy per frame
+                bne $d149
+
+            $d172
+                ldx <$66
+                lda AD98,x          <- total 16x16 cells to copy over all
 
 

@@ -173,6 +173,9 @@ find_entry:
 .load_asset
             jmp [xfer_asset]
 
+hook_d600:
+            lda <$01
+            cmp #$
 
 ;..............................................
 ; Author: Upsilandre's edits.
@@ -242,6 +245,9 @@ find_entry:
 
     .org $50c9
     .db $98
+
+    .org $D600
+    rts
 
 ;---------------------------------------
 ;---------------------------------------
@@ -353,7 +359,11 @@ find_entry:
     .db $3A, $C9, $05, $90, $02, $A9, $04, $9D, $3E, $36, $60, $EA, $EA, $EA, $EA, $EA, $EA, $EA, $EA
 
 
-    .org $13d0
+    .org $d3d0      ; Load full blocks of sprites at start of level
+
+        jsr Hook_1
+
+    .org $d149      ; Load segments of sprites during mid and end level
 
         jsr Hook_1
 
@@ -582,7 +592,7 @@ bank_table:
     .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 0
     .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 1
     .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 2
-    .db $00,$06,$0a,$ff,$ff,$10,$14,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$1c       ; 3
+    .db $00,$06,$0a,$ff,$ff,$10,$14,$ff,$24,$26,$2c,$30,$ff,$ff,$ff,$1c       ; 3
     .db $ff,$ff,$ff,$20,$ff,$ff,$22,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 4
     .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 5
     .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 6
@@ -630,7 +640,20 @@ level_sprite_data
 
     .dw $ffff ;.dw $57b1
 
+    .dw $4000 ;38   level 1 boss
+
+    .dw $5708 ;39
+    .dw $526c
+    .dw $5be0
+
+    .dw $54b5 ;3A
+    .dw $5e4d
+
+    .dw $4ecf ;3B
+    .dw $553a
+
 assets.bank
+    ;0-7
     .db 0
     .db 0
     .db bank(Enemy.guillotine)
@@ -639,7 +662,36 @@ assets.bank
     .db 0
     .db 0
     .db bank(Enemy.reaper)
+    ;8-15
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    ;16-23
+    .db 0
+    .db 0
+    .db bank(Enemy.boss_1.p0)
+    .db bank(Enemy.boss_1.p1)
+    .db bank(Enemy.boss_1.p2)
+    .db bank(Enemy.boss_1.p3)
+    .db bank(Enemy.boss_1.p4)
+    .db bank(Enemy.boss_1.p5)
+    ;24-31
+    .db bank(Enemy.boss_1.p6)
+    .db bank(Enemy.boss_1.p7)
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+
 assets.block
+    ;0-7
     .db 0
     .db 0
     .db sf2_page_1
@@ -648,8 +700,36 @@ assets.block
     .db 0
     .db 0
     .db sf2_page_1
+    ;8-15
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    ;16-23
+    .db 0
+    .db 0
+    .db sf2_page_1
+    .db sf2_page_1
+    .db sf2_page_1
+    .db sf2_page_1
+    .db sf2_page_1
+    .db sf2_page_1
+    ;24-31
+    .db sf2_page_1
+    .db sf2_page_1
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
 
 assets.addr.lo
+    ;0-7
     .db 0
     .db 0
     .db low(Enemy.guillotine)
@@ -658,8 +738,36 @@ assets.addr.lo
     .db 0
     .db 0
     .db low(Enemy.reaper)
+    ;8-15
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    ;16-23
+    .db 0
+    .db 0
+    .db low(Enemy.boss_1.p0)
+    .db low(Enemy.boss_1.p1)
+    .db low(Enemy.boss_1.p2)
+    .db low(Enemy.boss_1.p3)
+    .db low(Enemy.boss_1.p4)
+    .db low(Enemy.boss_1.p5)
+    ;24-31
+    .db low(Enemy.boss_1.p6)
+    .db low(Enemy.boss_1.p7)
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
 
 assets.addr.hi
+    ;0-7
     .db 0
     .db 0
     .db high(Enemy.guillotine)
@@ -668,6 +776,42 @@ assets.addr.hi
     .db 0
     .db 0
     .db high(Enemy.reaper)
+    ;8-15
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    ;16-23
+    .db 0
+    .db 0
+    .db high(Enemy.boss_1.p0)
+    .db high(Enemy.boss_1.p1)
+    .db high(Enemy.boss_1.p2)
+    .db high(Enemy.boss_1.p3)
+    .db high(Enemy.boss_1.p4)
+    .db high(Enemy.boss_1.p5)
+    ;24-31
+    .db high(Enemy.boss_1.p6)
+    .db high(Enemy.boss_1.p7)
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    ;24-31
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
+    .db 0
 
 
 
@@ -726,7 +870,154 @@ Enemy.guillotine.data
 Enemy.guillotine.pal
   .incpal "assets/head_stone/guillotine.png"
 
-Enemy.guillotine.offset = Enemy.repear.data + (8 * 128)
+Enemy.guillotine.offset = Enemy.guillotine.data + (8 * 128)
 
 ;                                    start_offset   end_offset
 Enemy.guillotine.len = ( 256 * 32 / 2) - (8 * 128)
+
+
+;..........................................
+;..........................................
+;..........................................
+;..........................................
+
+  .bank $88, "level-1 Boss"
+    .org $4000
+
+;....>>>>>>>>>>>>>>>>>>......
+    .page 2
+Enemy.boss_1.p0
+
+        tia Enemy.head.offset, $0002, Enemy.head.len
+        tii Enemy.head.pal, $2453 + (3*$20), 32
+        lda <$08
+        ldx <$66
+        sta $AD98,x
+        stz $Ae10,x
+  rts
+
+Enemy.head.data
+  .incspr "assets/shielder/shielder_head.png"
+Enemy.head.pal
+  .incpal "assets/shielder/shielder_head.png"
+Enemy.head.offset = Enemy.head.data + (12 * 128)
+Enemy.head.len = ( 256 * 96 / 2) - (12 * 128) - (6 * 128)
+
+
+;....>>>>>>>>>>>>>>>>>>......
+  .bank $8A, "level-1 p1"
+    .page 2
+Enemy.boss_1.p1
+
+        tia Enemy.legs.offset, $0012, Enemy.legs.len
+        tii Enemy.legs.pal, $2453 + (9*$20), 32
+        lda <$08
+        ldx <$66
+        sta $AD98,x
+        stz $Ae10,x
+  rts
+Enemy.boss_1.p2
+
+        tia Enemy.chest.offset, $0012, Enemy.chest.len
+        tii Enemy.legs.pal, $2453 + (9*$20), 32
+        lda <$08
+        ldx <$66
+        sta $AD98,x
+        stz $Ae10,x
+  rts
+Enemy.body_legs.data
+  .incspr "assets/shielder/shielder_body_legs.png"
+Enemy.legs.pal
+  .incpal "assets/shielder/shielder_body_legs.png"
+Enemy.legs.offset = Enemy.body_legs.data + (4 * 128)
+Enemy.legs.len = ( 256 * 112 / 2) - (4 * 128) - (6 * 128)
+Enemy.chest.offset = Enemy.body_legs.data + ( 256 * 96 / 2) + (12 * 128)
+Enemy.chest.len = ( 256 * 48 / 2) - (12 * 128) - (6 * 128)
+
+;....>>>>>>>>>>>>>>>>>>......
+  .bank $8D, "level-1 p2"
+    .page 2
+Enemy.boss_1.p3
+
+        tia Enemy.arm1.offset, $0012, Enemy.arm1.len
+        tii Enemy.arms.pal, $2453 + (10*$20), 32
+        lda <$08
+        ldx <$66
+        sta $AD98,x
+        stz $Ae10,x
+  rts
+
+Enemy.arms.data
+  .incspr "assets/shielder/shielder_arms.png"
+Enemy.arms.pal
+  .incpal "assets/shielder/shielder_arms.png"
+Enemy.arm1.offset = Enemy.arms.data + (8 * 128)
+Enemy.arm1.len = ( 256 * 112 / 2) - (8 * 128) - (12 * 128)
+
+;....>>>>>>>>>>>>>>>>>>......
+  .bank $8F, "level-1 p3"
+    .page 2
+Enemy.boss_1.p4
+
+        tia Enemy.arm2.offset, $0002, Enemy.arm2.len
+        tii Enemy.arms_2.pal, $2453 + (10*$20), 32
+        lda <$08
+        ldx <$66
+        sta $AD98,x
+        stz $Ae10,x
+  rts
+Enemy.arms_2.data
+  .incspr "assets/shielder/shielder_arms_2.png"
+Enemy.arms_2.pal
+  .incpal "assets/shielder/shielder_arms_2.png"
+Enemy.arm2.offset = Enemy.arms_2.data + (12 * 128)
+Enemy.arm2.len = ( 256 * 48 / 2) - (12 * 128) - (1 * 128)
+
+
+
+;....>>>>>>>>>>>>>>>>>>......
+  .bank $91, "level-1 p4"
+    .page 2
+Enemy.boss_1.p5
+
+        tia Enemy.tail.offset, $0012, Enemy.tail.len
+        tii Enemy.tail.pal, $2453 + (11*$20), 32
+        lda <$08
+        ldx <$66
+        sta $AD98,x
+        stz $Ae10,x
+        stz $Ae10,x
+  rts
+Enemy.tail.data
+  .incspr "assets/shielder/shielder_tail.png"
+
+Enemy.tail.pal
+  .incpal "assets/shielder/shielder_tail.png"
+
+Enemy.tail.offset = Enemy.tail.data
+Enemy.tail.len = ( 256 * 64 / 2) - (1 * 128)
+
+;....>>>>>>>>>>>>>>>>>>......
+    .page 2
+Enemy.boss_1.p6
+
+        ; tia Enemy.guillotine.offset, $0012, Enemy.guillotine.len
+        ; tii Enemy.guillotine.pal, $2453 + (3*$20), 32
+        lda <$08
+        ldx <$66
+        sta $AD98,x
+        stz $Ae10,x
+  rts
+
+;....>>>>>>>>>>>>>>>>>>......
+    .page 2
+Enemy.boss_1.p7
+
+        ; tia Enemy.guillotine.offset, $0012, Enemy.guillotine.len
+        ; tii Enemy.guillotine.pal, $2453 + (3*$20), 32
+        lda <$08
+        ldx <$66
+        sta $AD98,x
+        stz $Ae10,x
+  rts
+
