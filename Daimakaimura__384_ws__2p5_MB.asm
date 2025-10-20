@@ -174,8 +174,53 @@ find_entry:
             jmp [xfer_asset]
 
 hook_d600:
-            lda <$01
-            cmp #$
+            tma #$02
+            cmp #$04
+          bne .original.code
+            ldx <$66
+            lda <$08
+            sta $AD98,x
+            stz <$28
+  rts
+
+.original.code
+            lda <$29
+          bne .skip
+            jmp $D604
+.skip
+            jmp $D62D
+
+hook_eef7:
+            ldx <$00
+            cpx #$e1
+          bne .skip
+            ldx <$01
+            cpx #$ca
+          bne .skip
+            ldx #$70
+            stx <$00
+    rts
+
+.skip
+
+            ldx <$00
+            cpx #$67
+          bne .skip1
+            ldx <$01
+            cpx #$d4
+          bne .skip1
+            ldx #$70
+            stx <$00
+    rts
+
+.skip1
+          ldx #$80
+          stx <$78
+          jmp $eefb
+
+
+
+
 
 ;..............................................
 ; Author: Upsilandre's edits.
@@ -187,6 +232,13 @@ hook_d600:
     .org $1f50
 
       .db $04, $10, $00, $02, $02, $1f, $04
+
+;..............................................
+; Author: Txray
+
+    .org $eef7
+      jmp hook_eef7
+      nop
 
 
 ;##################################################################################################
@@ -247,7 +299,8 @@ hook_d600:
     .db $98
 
     .org $D600
-    rts
+      jmp hook_d600
+      nop
 
 ;---------------------------------------
 ;---------------------------------------
@@ -606,7 +659,7 @@ bank_entry_len:
     .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 0
     .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 1
     .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 2
-    .db $03,$02,$03,$ff,$ff,$02,$04,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$02       ; 3
+    .db $03,$02,$03,$ff,$ff,$02,$04,$ff,$02,$06,$04,$06,$ff,$ff,$ff,$02       ; 3
     .db $ff,$ff,$ff,$01,$ff,$ff,$01,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 4
     .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 5
     .db $ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff,$ff       ; 6
@@ -638,7 +691,7 @@ level_sprite_data
 
     .dw $ffff ;.dw $4e5a
 
-    .dw $ffff ;.dw $57b1
+    .dw $57b1
 
     .dw $4000 ;38   level 1 boss
 
@@ -651,6 +704,7 @@ level_sprite_data
 
     .dw $4ecf ;3B
     .dw $553a
+    .dw $5a8c
 
 assets.bank
     ;0-7
@@ -673,7 +727,7 @@ assets.bank
     .db 0
     ;16-23
     .db 0
-    .db 0
+    .db bank(Enemy.buzzard)
     .db bank(Enemy.boss_1.p0)
     .db bank(Enemy.boss_1.p1)
     .db bank(Enemy.boss_1.p2)
@@ -683,7 +737,7 @@ assets.bank
     ;24-31
     .db bank(Enemy.boss_1.p6)
     .db bank(Enemy.boss_1.p7)
-    .db 0
+    .db bank(Enemy.boss_1.p8)
     .db 0
     .db 0
     .db 0
@@ -711,7 +765,7 @@ assets.block
     .db 0
     ;16-23
     .db 0
-    .db 0
+    .db sf2_page_1
     .db sf2_page_1
     .db sf2_page_1
     .db sf2_page_1
@@ -721,7 +775,7 @@ assets.block
     ;24-31
     .db sf2_page_1
     .db sf2_page_1
-    .db 0
+    .db sf2_page_1
     .db 0
     .db 0
     .db 0
@@ -749,7 +803,7 @@ assets.addr.lo
     .db 0
     ;16-23
     .db 0
-    .db 0
+    .db low(Enemy.buzzard)
     .db low(Enemy.boss_1.p0)
     .db low(Enemy.boss_1.p1)
     .db low(Enemy.boss_1.p2)
@@ -759,7 +813,7 @@ assets.addr.lo
     ;24-31
     .db low(Enemy.boss_1.p6)
     .db low(Enemy.boss_1.p7)
-    .db 0
+    .db low(Enemy.boss_1.p8)
     .db 0
     .db 0
     .db 0
@@ -787,7 +841,7 @@ assets.addr.hi
     .db 0
     ;16-23
     .db 0
-    .db 0
+    .db high(Enemy.buzzard)
     .db high(Enemy.boss_1.p0)
     .db high(Enemy.boss_1.p1)
     .db high(Enemy.boss_1.p2)
@@ -797,7 +851,7 @@ assets.addr.hi
     ;24-31
     .db high(Enemy.boss_1.p6)
     .db high(Enemy.boss_1.p7)
-    .db 0
+    .db high(Enemy.boss_1.p8)
     .db 0
     .db 0
     .db 0
@@ -890,6 +944,7 @@ Enemy.boss_1.p0
 
         tia Enemy.head.offset, $0002, Enemy.head.len
         tii Enemy.head.pal, $2453 + (3*$20), 32
+        tii Enemy.head_damage.pal, $2453 + (4*$20), 32
         lda <$08
         ldx <$66
         sta $AD98,x
@@ -900,6 +955,9 @@ Enemy.head.data
   .incspr "assets/shielder/shielder_head.png"
 Enemy.head.pal
   .incpal "assets/shielder/shielder_head.png"
+Enemy.head_damage.pal
+  .incpal "assets/shielder/shielder_head_damage.png"
+
 Enemy.head.offset = Enemy.head.data + (12 * 128)
 Enemy.head.len = ( 256 * 96 / 2) - (12 * 128) - (6 * 128)
 
@@ -998,26 +1056,80 @@ Enemy.tail.offset = Enemy.tail.data
 Enemy.tail.len = ( 256 * 64 / 2) - (1 * 128)
 
 ;....>>>>>>>>>>>>>>>>>>......
+  .bank $94, "level-1 p4"
     .page 2
 Enemy.boss_1.p6
 
-        ; tia Enemy.guillotine.offset, $0012, Enemy.guillotine.len
-        ; tii Enemy.guillotine.pal, $2453 + (3*$20), 32
+        tia Enemy.fireball.offset, $0002, Enemy.fireball.len
+        tii Enemy.fireball.pal, $2453 + (12*$20), 32
         lda <$08
         ldx <$66
         sta $AD98,x
         stz $Ae10,x
   rts
+Enemy.fireball.data
+  .incspr "assets/shielder/shielder_fireball.png"
+
+Enemy.fireball.pal
+  .incpal "assets/shielder/shielder_fireball.png"
+Enemy.fireball.offset = Enemy.fireball.data
+Enemy.fireball.len = ( 256 * 32 / 2) - (6 * 128)
 
 ;....>>>>>>>>>>>>>>>>>>......
     .page 2
 Enemy.boss_1.p7
 
-        ; tia Enemy.guillotine.offset, $0012, Enemy.guillotine.len
-        ; tii Enemy.guillotine.pal, $2453 + (3*$20), 32
+        tia Enemy.debris.offset, $0002, Enemy.debris.len
+        tii Enemy.debris.pal, $2453 + (2*$20), 32
         lda <$08
         ldx <$66
         sta $AD98,x
         stz $Ae10,x
   rts
+Enemy.debris.data
+  .incspr "assets/shielder/shielder_debris.png"
 
+Enemy.debris.pal
+  .incpal "assets/shielder/shielder_debris.png"
+Enemy.debris.offset = Enemy.debris.data
+Enemy.debris.len = ( 256 * 32 / 2) - (10 * 128)
+
+;....>>>>>>>>>>>>>>>>>>......
+    .page 2
+Enemy.boss_1.p8
+
+        tia Enemy.shielder_explosion.offset, $0002, Enemy.shielder_explosion.len
+        lda <$08
+        ldx <$66
+        sta $AD98,x
+        stz $Ae10,x
+  rts
+Enemy.shielder_explosion.data
+  .incspr "assets/shielder/shielder_explosion.png"
+Enemy.shielder_explosion.offset = Enemy.shielder_explosion.data + (8 * 128)
+Enemy.shielder_explosion.len = ( 256 * 32 / 2) - (8 * 128) - (8 * 128)
+
+
+;..........................................
+;..........................................
+;..........................................
+;..........................................
+
+  .bank $96, "Buzzard"
+    .page 2
+Enemy.buzzard
+
+        tia Enemy.buzzard.offset, $0012, Enemy.buzzard.len
+        tii Enemy.buzzard.pal, $2453 + (13*$20), 32
+        lda <$08
+        ldx <$66
+        sta $AD98,x
+        stz $Ae10,x
+  rts
+Enemy.buzzard.data
+  .incspr "assets/buzzard/buzzard.png"
+
+Enemy.buzzard.pal
+  .incpal "assets/buzzard/buzzard.png"
+Enemy.buzzard.offset = Enemy.buzzard.data
+Enemy.buzzard.len = ( 256 * 128 / 2) - (9 * 128)
